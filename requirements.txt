@@ -1,0 +1,15 @@
+beir
+torch
+transformers
+sentence-transformers
+FlagEmbedding
+rank_bm25
+nltk
+tqdm
+numpy
+pandas
+scikit-learn
+scipy
+faiss-cpu
+matplotlib
+tabulate

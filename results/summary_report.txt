@@ -1,0 +1,32 @@
+============================================================
+BENCHMARK SUMMARY REPORT
+Generated: 2026-01-04T00:18:53.253941
+============================================================
+
+Total experiments: 113
+Datasets: fiqa, arguana, scifact, dbpedia-entity
+Models: minilm, word2vec, splade, bm25, bge-m3, bge-m3-all, minilm+splade, minilm+bm25, word2vec+splade, word2vec+bm25, bge-m3+splade, bge-m3+bm25
+
+TOP PERFORMERS (by Recall@10):
+----------------------------------------
+dataset         model  recall_at_10         qps
+scifact minilm+splade       0.94286  669.857109
+scifact minilm+splade       0.94286  246.674600
+scifact   minilm+bm25       0.94286  607.811791
+scifact minilm+splade       0.92857  743.545147
+scifact   minilm+bm25       0.92857 1654.630380
+
+BGE-M3-ALL BASELINE:
+----------------------------------------
+  fiqa: R@10=0.7500, QPS=7.8
+  arguana: R@10=0.8651, QPS=4.9
+  scifact: R@10=0.8857, QPS=6.6
+  dbpedia-entity: R@10=0.4314, QPS=18.9
+  dbpedia-entity: R@10=0.4314, QPS=19.7
+
+BEST HYBRID PER DATASET:
+----------------------------------------
+  fiqa: minilm+bm25 (α=0.75) - R@10=0.8438, QPS=1157.0
+  arguana: minilm+splade (α=0.5) - R@10=0.9226, QPS=637.2
+  scifact: minilm+splade (α=0.25) - R@10=0.9429, QPS=669.9
+  dbpedia-entity: minilm+splade (α=0.25) - R@10=0.4274, QPS=633.1
