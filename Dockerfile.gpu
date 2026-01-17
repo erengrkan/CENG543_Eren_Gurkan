@@ -1,0 +1,57 @@
+# Dockerfile for A100 GPU Experiment
+#
+# This container runs the FINAL benchmark on A100 GPU:
+# - DBpedia: 100K documents
+# - SciFact, FiQA, ArguAna: Full corpus
+# - Models: minilm, splade, bm25, word2vec, bge-m3 (NO bge-m3-all)
+#
+# Build: docker build -t vector-bench-gpu -f Dockerfile.gpu .
+# Run:   docker run --rm --gpus all -v $(pwd)/results:/app/results vector-bench-gpu
+#
+# Estimated Time on A100: ~30-60 minutes (10x faster than CPU)
+
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-dev \
+    python3-pip \
+    build-essential \
+    git \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.11 as default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+WORKDIR /app
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Copy requirements first for layer caching
+COPY requirements.txt .
+
+# Install PyTorch with CUDA support first
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# Install other requirements
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir matplotlib tabulate
+
+# Copy source code
+COPY . .
+
+# Create directories
+RUN mkdir -p data/raw data/embeddings results
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Copy and set entrypoint script
+COPY scripts/final_experiment.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -54,7 +54,7 @@ from beir.retrieval.evaluation import EvaluateRetrieval
 from beir.datasets.data_loader import GenericDataLoader
 from beir import util
 
-from src.vector_experiments.indexer import FlatIPIndexer
+from src.vector_experiments.indexer import FlatIPIndexer, HNSWIndexerIP
 from src.vector_experiments.models import (
     BaseEmbedder,
     SpladeEmbedder,
@@ -820,6 +820,8 @@ def main():
                         help="Only run single model benchmarks")
     parser.add_argument("--hybrid-only", action="store_true",
                         help="Only run hybrid benchmarks")
+    parser.add_argument("--exclude-models", type=str, default="",
+                        help="Comma-separated list of models to exclude (e.g., bge-m3-all)")
     args = parser.parse_args()
     
     alphas = [float(a) for a in args.alphas.split(",")]
@@ -843,7 +845,8 @@ def main():
         
         # Single model benchmarks (includes baselines)
         if not args.hybrid_only:
-            all_single_models = DENSE_MODELS + SPARSE_MODELS + BASELINE_MODELS
+            exclude_set = set(args.exclude_models.split(",")) if args.exclude_models else set()
+            all_single_models = [m for m in DENSE_MODELS + SPARSE_MODELS + BASELINE_MODELS if m not in exclude_set]
             for model in all_single_models:
                 result = run_single_model_benchmark(
                     dataset, model, args.embeddings_dir,
