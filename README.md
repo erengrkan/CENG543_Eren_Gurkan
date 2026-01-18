@@ -1,142 +1,259 @@
-# Hybrid Vector Search Experiments
+# CENG543 Vector Retrieval Benchmark
 
-**Research Question**: Can lightweight hybrid retrieval methods (e.g., MiniLM + SPLADE) match the quality of heavyweight multi-modal systems (BGE-M3 All) while significantly improving throughput?
+Bu proje, farklı vektör arama yöntemlerinin (Dense, Sparse, Hybrid) BEIR benchmark datasetleri üzerindeki performansını karşılaştırmaktadır.
 
-## Abstract
+## 📊 Sonuçların Özeti
 
-This repository contains the experimental codebase and **final results** for evaluating various vector embedding and retrieval strategies across multiple BEIR benchmark datasets. The goal is to systematically compare:
-
-1.  **Heavyweight Baseline**: `BGE-M3 All` (Dense + Sparse + ColBERT multi-vector) - State-of-the-art quality but computationally expensive.
-2.  **Lightweight Single Models**: `MiniLM`, `SPLADE`, `BM25`, `Word2Vec`.
-3.  **Lightweight Hybrid Models**: `MiniLM+SPLADE`, `MiniLM+BM25`, etc.
-
-Key metrics include **Recall@K**, **Latency P99**, and **QPS** (Queries Per Second).
-
-## 🚀 Key Findings
-
-Our experiments strongly support the hypothesis: **Lightweight hybrid models can match or exceed the retrieval quality of state-of-the-art multi-modal models while delivering orders of magnitude higher throughput.**
-
-| Dataset | Best Hybrid Model | Hybrid R@10 | BGE-M3 All R@10 | Hybrid QPS | BGE-M3 All QPS | Speedup |
-|---------|-------------------|-------------|-----------------|------------|----------------|---------|
-| **SciFact** | MiniLM + SPLADE | **0.9429** | 0.8857 | ~670 | ~6.6 | **101x** |
-| **ArguAna** | MiniLM + SPLADE | **0.9226** | 0.8651 | ~637 | ~4.9 | **130x** |
-| **FiQA** | MiniLM + BM25 | **0.8438** | 0.7500 | ~1157 | ~7.8 | **148x** |
-| **DBpedia** | MiniLM + SPLADE | 0.4274 | **0.4314** | ~633 | ~19 | **33x** |
-
-**Conclusion**: For most production use cases, a hybrid of `MiniLM` (Dense) + `SPLADE` (Sparse) offers the optimal trade-off, delivering SOTA quality at a fraction of the cost.
+| Dataset | En İyi Model | Recall@10 | QPS |
+|---------|-------------|-----------|-----|
+| SciFact | minilm+splade (α=0.5) | **0.9429** | 253 |
+| ArguAna | minilm+splade (α=0.5) | **0.9226** | 249 |
+| DBpedia-Entity | minilm+splade (α=0.5) | **0.4536** | 4.7 |
+| FiQA | bge-m3 | **0.4833** | 61 |
 
 ---
 
-## 📊 Detailed Results
+## 📈 Figure Yorumları
 
-### Retrieval Performance Comparison
+### 1. Speed vs Quality Tradeoff (`speed_vs_quality.png`)
 
-The following table summarizes the performance of all models across the 4 datasets (Mock run with 1000 docs).
+Bu grafik, modellerin **hız (QPS)** ve **kalite (Recall@10)** açısından konumlarını göstermektedir.
 
-| Dataset | Model | Recall@10 | NDCG@10 | Latency P99 (ms) | QPS |
-|:---|:---|---:|---:|---:|---:|
-| **arguana** | **bge-m3** | 0.9107 | 0.6187 | 0.22 | 8287 |
-| | **bge-m3-all** | 0.8651 | 0.5709 | **359.58** | **4.9** |
-| | bm25 | 0.7381 | 0.4415 | 0.42 | 3373 |
-| | minilm | 0.9008 | 0.5860 | 0.13 | 12601 |
-| | **minilm+splade** (Best Hybrid) | **0.9226** | **0.6237** | 1.46 | 637 |
-| **dbpedia-entity** | **bge-m3-all** | **0.4314** | 0.3562 | 82.36 | 19.3 |
-| | bm25 | 0.2961 | 0.2255 | 0.42 | 5817 |
-| | minilm | 0.4137 | 0.3481 | 1.76 | 5496 |
-| | **minilm+splade** (Best Hybrid) | 0.4274 | **0.3640** | 1.48 | 633 |
-| **fiqa** | **bge-m3-all** | 0.7500 | 0.7037 | 205.99 | 7.8 |
-| | bm25 | 0.6562 | 0.4875 | 0.36 | 4249 |
-| | minilm | 0.8750 | 0.7538 | 0.72 | 9291 |
-| | **minilm+bm25** (Best Hybrid) | **0.8438** | **0.7595** | 0.73 | 1156 |
-| **scifact** | **bge-m3-all** | 0.8857 | 0.7922 | 248.78 | 6.6 |
-| | bm25 | 0.8143 | 0.7120 | 0.71 | 2994 |
-| | minilm | 0.8857 | 0.7879 | 0.70 | 9673 |
-| | **minilm+splade** (Best Hybrid) | **0.9429** | **0.8305** | 1.60 | 553 |
+**Bölgeler:**
+- 🟢 **Yeşil bölge (üst):** Yüksek kalite bölgesi (Recall@10 > 0.8)
+- 🔵 **Mavi bölge (sağ):** Yüksek hız bölgesi (QPS > 100)
+- **Sağ üst köşe** en ideal konumdur (hem hızlı hem kaliteli)
 
-### Visualizations
+**Semboller:**
+- ⚪ **Yuvarlak:** Dense modeller (MiniLM, BGE-M3)
+- 🔺 **Üçgen:** Sparse modeller (SPLADE, BM25)
+- ⬛ **Kare:** Hybrid modeller (Dense + Sparse kombinasyonu)
 
-#### Recall@10 Comparison
-Comparing the retrieval quality of single models vs. hybrids.
-![Recall Comparison](results/figures/recall_comparison.png)
-
-#### Latency vs. Recall Tradeoff
-Visualizing the cost-benefit analysis. Note the logarithmic scale on Latency.
-![Latency vs Recall](results/figures/latency_vs_recall.png)
-
-#### Throughput (QPS) Comparison
-Comparing the raw speed of each approach.
-![QPS Comparison](results/figures/qps_comparison.png)
+**Gözlemler:**
+- `minilm` ve `bge-m3` sağ üst bölgede - hem hızlı hem kaliteli
+- `bge-m3-all` yüksek kaliteli ama çok yavaş (sol tarafta)
+- Hybrid modeller (`minilm+splade`) en yüksek recall'a ulaşıyor
 
 ---
 
-## Methodology
+### 2. Latency vs Recall Tradeoff (`latency_vs_recall.png`)
 
-### Datasets
-We use 4 diverse datasets from the BEIR benchmark:
-- `dbpedia-entity`: General knowledge entity retrieval.
-- `scifact`: Biomedical fact verification.
-- `fiqa`: Financial opinion QA.
-- `arguana`: Argument retrieval (proxy for Touche-2020).
+Bu grafik, **gecikme süresi (ms)** ile **kalite** arasındaki tradeoff'u gösterir.
 
-### Models
-| Model | Type | Dimensionality | Notes |
-|-------|------|----------------|-------|
-| BGE-M3 All | Dense+Sparse+ColBERT | 1024 | Heavyweight, highest cost |
-| MiniLM | Dense | 384 | Efficient BERT |
-| SPLADE | Sparse | ~30k | Learned Sparse |
-| BM25 | Sparse | Vocabulary | Lexical Baseline |
-| Word2Vec | Dense | 100 | Static Baseline |
-
-### Hybrid Approach
-For hybrid models, we combine dense and sparse scores using linear interpolation:
-`Final_Score = α × Dense_Score + (1 - α) × Sparse_Score`, where `α ∈ {0.25, 0.5, 0.75}`.
-
-### Evaluation Environment
-All benchmarks run inside a **Docker container** with fixed resources:
-- CPU: 6 Cores
-- RAM: 12 GB
+**Yorum:**
+- **Sol üst köşe** idealdir (düşük gecikme + yüksek recall)
+- `minilm` en düşük gecikme süresine sahip (~1ms) ve yüksek kaliteli
+- `bge-m3-all` en yüksek gecikmeye sahip (1000+ ms) - pratik kullanım için uygun değil
+- Hybrid modeller orta gecikme süresinde (~10-50ms) en yüksek recall'ı sağlıyor
 
 ---
 
-## Reproducibility
+### 3. Recall by Dataset (`recall_by_dataset.png`)
 
-### Quick Start
+Her dataset için modellerin Recall@10 karşılaştırması.
 
+**Gözlemler:**
+- **SciFact ve ArguAna:** Hybrid modeller açık ara önde
+- **DBpedia-Entity:** En zor dataset, tüm modeller düşük performans
+- **FiQA:** BGE-M3 dense model iyi performans gösteriyor
+
+---
+
+### 4. Alpha Sensitivity (`alpha_sensitivity.png`)
+
+Alpha (α) değerinin hybrid model performansına etkisi.
+
+**Alpha Değeri:**
+- α = 0: Sadece Sparse (SPLADE/BM25)
+- α = 1: Sadece Dense (MiniLM/Word2Vec)
+- α = 0.5: Eşit ağırlık
+
+**Gözlemler:**
+- Çoğu dataset için **α = 0.25-0.5** optimal
+- Dense ve Sparse'ın birleşimi tek başlarından daha iyi
+
+---
+
+### 5. Model Ranking (`model_ranking.png`)
+
+Tüm datasetler üzerinden ortalama model sıralaması.
+
+**Sonuç:** `minilm+splade` genel olarak en iyi performansı gösteriyor.
+
+---
+
+### 6. BGE-M3-ALL Comparison (`bge_m3_all_comparison.png`)
+
+BGE-M3-ALL baseline ile en iyi hybrid modelin karşılaştırması.
+
+**Önemli Bulgu:**
+- Hybrid modeller, BGE-M3-ALL'dan daha yüksek recall sağlıyor
+- Hybrid modeller **100-1000x daha hızlı**
+
+---
+
+## 🚀 Deneyi Yeniden Oluşturma (Recreate)
+
+### Gereksinimler
+- NVIDIA GPU (A100 önerilir)
+- Docker
+- 250GB+ disk alanı (embeddingler için)
+
+### Adım 1: Repo'yu Klonla
 ```bash
-# Setup
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run Full Benchmark (Generation + Evaluation)
-# Note: Requires Docker. If local, use scripts/docker_entrypoint.sh directly.
-./scripts/docker_entrypoint.sh
+git clone https://github.com/erengrkan/CENG543_Eren_Gurkan.git
+cd CENG543_Eren_Gurkan
 ```
 
-### Directory Structure
-
-```
-vector-experiments/
-├── README.md                 # This file (Final Report)
-├── results/                  # Generated results
-│   ├── benchmark_*.json      # Raw data
-│   ├── figures/              # Plots
-│   └── tables/               # Formatted tables
-├── src/                      # Source code
-├── scripts/                  # Entrypoint scripts
-└── docs/                     # Detailed docs
+### Adım 2: Docker İmajını Oluştur
+```bash
+docker build -t vector-bench-gpu -f Dockerfile.gpu .
 ```
 
-## Citation
-
-If you use this codebase, please cite:
-```
-@misc{vector-experiments-2024,
-  title={Lightweight Hybrid Retrieval vs. Heavyweight Multi-Modal Systems},
-  author={Eren Gurkan},
-  year={2026}
-}
+### Adım 3: Tüm Deneyi Çalıştır
+```bash
+./scripts/run_a100.sh
 ```
 
-## License
-MIT
+Bu script:
+1. Datasetleri indirir (BEIR)
+2. Tüm modeller için embedding oluşturur
+3. Benchmark çalıştırır
+4. Sonuçları `results/` klasörüne kaydeder
+
+### Adım 4: Figure'ları Oluştur
+```bash
+docker run --rm -v $(pwd)/results:/app/results -v $(pwd)/scripts:/app/scripts \
+    --entrypoint python vector-bench-gpu /app/scripts/generate_figures.py
+```
+
+### Tahmini Süre (A100 GPU)
+| Aşama | Süre |
+|-------|------|
+| Embedding oluşturma | 2-3 saat |
+| Benchmark | 30-60 dakika |
+| **Toplam** | ~3-4 saat |
+
+---
+
+## ⚠️ BGE-M3-ALL Hakkında Önemli Not
+
+### Neden Tüm Karşılaştırmalarda Yok?
+
+**BGE-M3-ALL** modeli, üç farklı retrieval sinyalini birleştirir:
+1. **Dense:** Cosine similarity
+2. **Sparse:** Lexical weights
+3. **ColBERT:** Token-level MaxSim
+
+**Problem:** ColBERT MaxSim hesaplaması **O(n × m × d)** karmaşıklığındadır:
+- n = Doküman sayısı
+- m = Query token sayısı
+- d = Doküman token sayısı
+
+### Hesaplama Süresi Örnekleri
+
+| Dataset | Doküman | Sorgu | ColBERT Süresi |
+|---------|---------|-------|----------------|
+| SciFact | 5K | 300 | ~8 dakika |
+| ArguAna | 8K | 504 | ~15 dakika |
+| FiQA | 57K | 612 | **~4 saat** (tahmini) |
+| DBpedia | 100K | 393 | **~6+ saat** (tahmini) |
+
+### Sonuç
+
+- **Küçük datasetler** (SciFact, ArguAna): BGE-M3-ALL test edildi
+- **Büyük datasetler** (FiQA, DBpedia): Pratik olmadığı için atlandı
+- **Alternatif:** BGE-M3 (sadece dense) kullanıldı - çok daha hızlı, benzer kalite
+
+### Makale için Not
+
+> "BGE-M3-ALL modeli, ColBERT token-level matching kullandığından büyük ölçekli datasetlerde (50K+ doküman) pratik değildir. Bu nedenle karşılaştırmalarda sadece küçük datasetler (SciFact, ArguAna) için dahil edilmiştir."
+
+---
+
+## 📋 Ek Notlar ve Metodoloji
+
+### 1. Hybrid Fusion Stratejisi
+
+Score birleştirme formülü:
+```
+Final_Score = α × Dense_Score_Norm + (1-α) × Sparse_Score_Norm
+```
+
+Where:
+- **Min-Max normalizasyon** query bazında uygulanır
+- **α = 0.5** genellikle optimal
+
+### 2. HNSW İndeksleme Parametreleri
+
+Dense vektörler için FAISS HNSW:
+- `M = 32` (bağlantı sayısı)
+- `efConstruction = 200`
+- `efSearch = 128`
+
+### 3. Değerlendirme Metrikleri
+
+- **Recall@10:** İlk 10 sonuçta bulunan relevant doküman oranı
+- **NDCG@10:** Sıralama kalitesi
+- **QPS:** Saniyede işlenen sorgu sayısı
+- **Latency P99:** 99. percentile gecikme süresi
+
+### 4. Kullanılan Modeller
+
+| Model | Tip | Boyut | Kaynak |
+|-------|-----|-------|--------|
+| MiniLM | Dense | 384d | sentence-transformers |
+| SPLADE | Sparse | ~30K | naver/splade-cocondenser |
+| BM25 | Sparse | - | rank_bm25 |
+| Word2Vec | Dense | 300d | Custom trained |
+| BGE-M3 | Dense | 1024d | BAAI/bge-m3 |
+| BGE-M3-ALL | Multi | 1024d + sparse + colbert | BAAI/bge-m3 |
+
+### 5. Dataset İstatistikleri
+
+| Dataset | Doküman | Query | Domain |
+|---------|---------|-------|--------|
+| SciFact | 5,183 | 300 | Bilimsel makaleler |
+| ArguAna | 8,674 | 1,406 | Tartışma metinleri |
+| FiQA | 57,638 | 648 | Finansal sorular |
+| DBpedia-Entity | 4.6M (100K kullanıldı) | 400 | Wikipedia entities |
+
+---
+
+## 📁 Proje Yapısı
+
+```
+CENG543_Eren_Gurkan/
+├── src/vector_experiments/
+│   ├── models.py          # Embedding modelleri
+│   ├── benchmark.py       # Ana benchmark scripti
+│   ├── indexer.py         # HNSW indexleme
+│   └── analyze_results.py # Analiz ve görselleştirme
+├── scripts/
+│   ├── run_a100.sh        # Ana çalıştırma scripti
+│   └── generate_figures.py # Figure oluşturma
+├── data/
+│   ├── raw/               # BEIR datasetleri
+│   └── embeddings/        # Ön-hesaplanmış embeddingler
+├── results/
+│   ├── figures/           # Grafikler
+│   ├── tables/            # LaTeX/MD tablolar
+│   └── benchmark_*.json   # Ham sonuçlar
+├── Dockerfile.gpu         # GPU Docker yapılandırması
+└── README.md              # Bu dosya
+```
+
+---
+
+## 🔗 Referanslar
+
+1. **BEIR Benchmark:** Thakur et al., "BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models", NeurIPS 2021
+2. **SPLADE:** Formal et al., "SPLADE v2: Sparse Lexical and Expansion Model for First Stage Ranking", 2022
+3. **BGE-M3:** Chen et al., "BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity", 2024
+4. **MiniLM:** Wang et al., "MiniLM: Deep Self-Attention Distillation for Task-Agnostic Compression", 2020
+
+---
+
+**Hazırlayan:** Eren Gürkan  
+**Ders:** CENG543 - Information Retrieval  
+**Tarih:** 2026
